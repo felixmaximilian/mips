@@ -1,29 +1,33 @@
+import java.io.Serializable
+
 import breeze.linalg.functions.euclideanDistance
 import breeze.linalg.{DenseVector, norm}
-case class IdWithFeatures(id: Int,features: DenseVector[Double])
+
+case class IdWithFeatures(id: Int,features: DenseVector[Double]) extends Serializable
+
 @SerialVersionUID(100L)
-class BallTree(points: IndexedSeq[IdWithFeatures]) extends Serializable {
-  case class BestMatch(index: Int, value: Double)
+case class BallTree(points: IndexedSeq[IdWithFeatures]) extends Serializable {
+  
+  case class BestMatch(index: Int, value: Double) extends Serializable
 
-  case class Query(point: DenseVector[Double], var bestMatches: BoundedPriorityQueue[BestMatch])
+  case class Query(point: DenseVector[Double], var bestMatches: BoundedPriorityQueue[BestMatch]) extends Serializable
 
-  case class Ball(mu: DenseVector[Double], radius: Double)
+  case class Ball(mu: DenseVector[Double], radius: Double) extends Serializable
 
-
-  abstract class Node(val pointIdx: Seq[Int], val ball: Ball) {
+  abstract class Node(val pointIdx: Seq[Int], val ball: Ball) extends Serializable {
   }
 
   case class LeafNode(override val pointIdx: Seq[Int],
-                      override val ball: Ball) extends Node(pointIdx, ball) {
+                      override val ball: Ball) extends Node(pointIdx, ball) with Serializable{
 
   }
 
   case class InnerNode(override val pointIdx: Seq[Int],
                        override val ball: Ball,
                        leftChild: Node,
-                       rightChild: Node) extends Node(pointIdx, ball)
+                       rightChild: Node) extends Node(pointIdx, ball) with Serializable
 
-  val randomIntGenerator = scala.util.Random
+  val randomIntGenerator = new java.util.Random()
 
   val leafThreshold: Int = 50
   val dim = points(0).features.length
@@ -52,8 +56,7 @@ class BallTree(points: IndexedSeq[IdWithFeatures]) extends Serializable {
     val bestMatchesCandidates = node.pointIdx.map { idx => BestMatch(idx, (query.point dot points(idx).features).asInstanceOf[Double]) }
     query.bestMatches ++= (bestMatchesCandidates)
   }
-
-
+  
   private def makeBallSplit(pointIdx: Seq[Int]): (Int, Int) = {
     //finding two points in Set that have largest distance
     val randPoint = points(pointIdx(randomIntGenerator.nextInt(pointIdx.length))).features
@@ -125,6 +128,10 @@ class BallTree(points: IndexedSeq[IdWithFeatures]) extends Serializable {
     val query = Query(queryPoint, bestMatches)
     traverseTree(query, root)
     query.bestMatches.toArray.sorted(Ordering.by((_: BestMatch).value).reverse)
+  }
+  
+  override def toString() = {
+    s"Balltree with data size of ${points.length} (${points.take(1)}})"
   }
 }
 

@@ -117,14 +117,16 @@ class BallTreeTest extends org.specs2.mutable.Specification {
 
       val fos = new FileOutputStream("../a.tmp")
       val oos = new ObjectOutputStream(fos)
-     
       
+      oos.writeObject(tree)
       oos.close
+     
+      fos.close
 
       val fis = new FileInputStream("../a.tmp")
       val ois = new ObjectInputStream(fis)
-      val treeDeserialized : BallTree = ois.readObject.asInstanceOf[BallTree]
-      treeDeserialized.findMaximumInnerProducts(DenseVector(9.0, 10.0, 11.0))
+      val treeDeserialized : BallTree = ois.readObject().asInstanceOf[BallTree]
+      println(treeDeserialized.findMaximumInnerProducts(DenseVector(9.0, 10.0, 11.0)))
       true must beEqualTo(true)
 //      oos.writeObject(tree) must not(throwA[IOException])
     }
