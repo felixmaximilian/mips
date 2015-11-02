@@ -2,7 +2,10 @@ import java.io.Serializable
 import java.util.{PriorityQueue => JPriorityQueue}
 import scala.collection.generic.Growable
 
-//imported from spark
+/*
+This file is taken from the Apache Spark project and is licensed under Apache License version 2.0.
+Original file: https://github.com/apache/spark/core/src/main/scala/org/apache/spark/util/BoundedPriorityQueue.scala
+ */
 
 class BoundedPriorityQueue[A](maxSize: Int)(implicit ord: Ordering[A]) extends Iterable[A] with Growable[A] with Serializable {
   import scala.collection.JavaConverters._

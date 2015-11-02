@@ -19,7 +19,7 @@ class BallTreeTest extends org.specs2.mutable.Specification {
     result
   }
 
-  def compareToGroundTruth(tree: BallTree, haystack: IndexedSeq[IdWithFeatures], needle: DenseVector[Double], k: Int = 1) = {
+  def compareToGroundTruth(tree: BallTree, haystack: IndexedSeq[VectorWithExternalId], needle: DenseVector[Double], k: Int = 1) = {
     val nearest = tree.findMaximumInnerProducts(needle, k)
     val groundTruth = haystack.indices.map { point => (point, haystack(point).features.t * needle) }
 
@@ -27,7 +27,7 @@ class BallTreeTest extends org.specs2.mutable.Specification {
     (better, nearest)
   }
 
-  def test(haystack: IndexedSeq[IdWithFeatures], needles: DenseVector[Double]*) = {
+  def test(haystack: IndexedSeq[VectorWithExternalId], needles: DenseVector[Double]*) = {
     println
     val tree = new BallTree(haystack)
     //    if (haystack.size < 20) tree.foreach(println)
@@ -48,7 +48,7 @@ class BallTreeTest extends org.specs2.mutable.Specification {
     "be exact" in {
       val uniform: immutable.IndexedSeq[DenseVector[Double]] = for (x <- 1 to 10; y <- 1 to 10; z <- 1 to 10) yield DenseVector((x * 2).toDouble, (y * 2).toDouble, (z * 2).toDouble)
       assume(uniform.size == 1000)
-      val uniformAsMap: immutable.IndexedSeq[IdWithFeatures] = uniform.indices.map{i:Int =>IdWithFeatures(i, uniform(i))}
+      val uniformAsMap: immutable.IndexedSeq[VectorWithExternalId] = uniform.indices.map{i:Int =>VectorWithExternalId(i, uniform(i))}
       val needle = DenseVector(9.0, 10.0, 11.0)
       val nearest = test(uniformAsMap, needle)
 
@@ -61,7 +61,7 @@ class BallTreeTest extends org.specs2.mutable.Specification {
     val uniform = for (x <- 1 to 10; y <- 1 to 10; z <- 1 to 10) yield DenseVector((x * 2).toDouble, (y * 2).toDouble, (z * 2).toDouble)
     assume(uniform.size == 1000)
 
-    val uniformAsMap: immutable.IndexedSeq[IdWithFeatures] = uniform.indices.map{i:Int =>IdWithFeatures(i, uniform(i))}
+    val uniformAsMap: immutable.IndexedSeq[VectorWithExternalId] = uniform.indices.map{i:Int =>VectorWithExternalId(i, uniform(i))}
 
     val tree = new BallTree(uniformAsMap)
 
@@ -79,7 +79,7 @@ class BallTreeTest extends org.specs2.mutable.Specification {
       def random(n: Int) = (1 to n).map(_ => (scala.util.Random.nextDouble - 0.5) * 2)
 
       val haystack = (1 to 100000).map(_ => DenseVector(random(3).toArray))
-      val haystackAsMap: immutable.IndexedSeq[IdWithFeatures] = haystack.indices.map{i:Int =>IdWithFeatures(i, haystack(i))}
+      val haystackAsMap: immutable.IndexedSeq[VectorWithExternalId] = haystack.indices.map{i:Int =>VectorWithExternalId(i, haystack(i))}
 
       val tree = new BallTree(haystackAsMap)
       val (better, nearest) = compareToGroundTruth(tree, haystackAsMap, DenseVector(random(3).toArray))
@@ -95,7 +95,7 @@ class BallTreeTest extends org.specs2.mutable.Specification {
 
       val haystack = (1 to 100000).map(_ => DenseVector(random(3).toArray))
 
-      val haystackAsMap: immutable.IndexedSeq[IdWithFeatures] = haystack.indices.map{i:Int =>IdWithFeatures(i, haystack(i))}
+      val haystackAsMap: immutable.IndexedSeq[VectorWithExternalId] = haystack.indices.map{i:Int =>VectorWithExternalId(i, haystack(i))}
 
       val needle = DenseVector(random(3).toArray)
       val groundTruth = naiveSearch(haystack, needle)
@@ -112,7 +112,7 @@ class BallTreeTest extends org.specs2.mutable.Specification {
     "be serializable" in {
       val uniform: immutable.IndexedSeq[DenseVector[Double]] = for (x <- 1 to 10; y <- 1 to 10; z <- 1 to 10) yield DenseVector((x * 2).toDouble, (y * 2).toDouble, (z * 2).toDouble)
       assume(uniform.size == 1000)
-      val uniformAsMap: immutable.IndexedSeq[IdWithFeatures] = uniform.indices.map{i:Int =>IdWithFeatures(i, uniform(i))}
+      val uniformAsMap: immutable.IndexedSeq[VectorWithExternalId] = uniform.indices.map{i:Int =>VectorWithExternalId(i, uniform(i))}
       val tree = new BallTree(uniformAsMap)
 
       val fos = new FileOutputStream("../a.tmp")

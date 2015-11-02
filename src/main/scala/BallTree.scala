@@ -3,60 +3,93 @@ import java.io.Serializable
 import breeze.linalg.functions.euclideanDistance
 import breeze.linalg.{DenseVector, norm}
 
-case class IdWithFeatures(id: Int,features: DenseVector[Double]) extends Serializable
-
-@SerialVersionUID(100L)
-case class BallTree(points: IndexedSeq[IdWithFeatures]) extends Serializable {
-  
-  case class BestMatch(index: Int, value: Double) extends Serializable
-
-  case class Query(point: DenseVector[Double], var bestMatches: BoundedPriorityQueue[BestMatch]) extends Serializable
-
-  case class Ball(mu: DenseVector[Double], radius: Double) extends Serializable
-
-  abstract class Node(val pointIdx: Seq[Int], val ball: Ball) extends Serializable {
+final case class VectorWithExternalId(id: Int, features: DenseVector[Double]) extends Serializable {
+  override def toString() = {
+    s"IdWithFeatures(${id}},${features}})"
   }
+}
 
-  case class LeafNode(override val pointIdx: Seq[Int],
-                      override val ball: Ball) extends Node(pointIdx, ball) with Serializable{
+final case class BestMatch(index: Int, value: Double) extends Serializable
 
+final case class Statistics(var pointsInTree:Int = 1, var innerProductEvaluations: Int = 0, var subTreeIgnores: Int = 0, var subtreesVisited: Int = 0, var boundEvaluations: Int = 0)  extends Serializable{
+  override def toString() = {
+    s"innerProductEvaluations: ${innerProductEvaluations}, \n" +
+      s"subTreeIgnores: ${subTreeIgnores}, \n" +
+      s"subtreesVisited: ${subtreesVisited}, \n" +
+      s"boundEvaluations: ${boundEvaluations}, \n" +
+      s"innerProductEvaluationsRelativeToNaiveSearch: ${innerProductEvaluations.toDouble/pointsInTree*100} %"
   }
+}
+object Query {
+  def createQueue(k: Int) = {
+    val bestMatches = new BoundedPriorityQueue[BestMatch](k)(Ordering.by(_.value))
+    bestMatches += BestMatch(-1, Double.NegativeInfinity)
+  }
+}
+final class Query(val point: DenseVector[Double], val normOfQueryPoint: Double, var bestMatches: BoundedPriorityQueue[BestMatch], var statistics: Statistics) extends Serializable {
 
-  case class InnerNode(override val pointIdx: Seq[Int],
-                       override val ball: Ball,
-                       leftChild: Node,
-                       rightChild: Node) extends Node(pointIdx, ball) with Serializable
+  def this(point: DenseVector[Double], bestK: Int) = this(point, norm(point), Query.createQueue(bestK), Statistics())
 
+  override def toString() = {
+    s"Query with point ${point}} \n " +
+      s"and bestMatches of size of ${bestMatches.size} (bestMatch example: ${bestMatches.take(1)}})"
+  }
+}
+
+final case class Ball(mu: DenseVector[Double], radius: Double) extends Serializable
+
+sealed trait Node extends Serializable {
+  def ball: Ball
+}
+
+final case class LeafNode(pointIdx: Seq[Int],
+                          override val ball: Ball) extends Node {
+  override def toString() = {
+    s"LeafNode with ${ball.toString}} \n " +
+      s"and data size of ${pointIdx.length} (example point: ${pointIdx.take(1)}})"
+  }
+}
+
+final case class InnerNode(override val ball: Ball,
+                           leftChild: Node,
+                           rightChild: Node) extends Node {
+  override def toString() = {
+    s"InnerNode with ${ball.toString}}."
+  }
+}
+
+final case class BallTree(points: IndexedSeq[VectorWithExternalId],leafSize:Int = 50) extends Serializable {
+
+  //using java version of Random() cause the scala version is only serializable since scala version 2.11
   val randomIntGenerator = new java.util.Random()
 
-  val leafThreshold: Int = 50
   val dim = points(0).features.length
 
-  val root = makeBallTree(points.indices)
+  val pointIdx = points.indices
+  val root = makeBallTree(pointIdx)
 
   private def mean(pointIdx: Seq[Int]): DenseVector[Double] = {
     pointIdx.foldLeft(DenseVector.zeros[Double](dim))((sumSoFar: DenseVector[Double], idx: Int) => sumSoFar + points(idx).features).map { scalar: Double => scalar / pointIdx.length }
-    //    pointIdx.map(points(_)).sum.map(scalar => scalar / indexedSeq.length).toDenseVector
   }
 
   private def radius(pointIdx: Seq[Int], point: DenseVector[Double]): Double = {
     pointIdx.map { idx => {
-      val ed = euclideanDistance(points(idx).features, point)
-      //      ed * ed
-      ed
+      euclideanDistance(points(idx).features, point)
     }
     }.max
   }
 
   private def upperBoundMaximumInnerProduct(query: Query, node: Node): Double = {
-    (query.point dot node.ball.mu).asInstanceOf[Double] + (node.ball.radius * norm(query.point))
+    query.statistics.boundEvaluations += 1
+    (query.point dot node.ball.mu).asInstanceOf[Double] + (node.ball.radius * query.normOfQueryPoint)
   }
 
-  def linearSearch(query: Query, node: Node): Unit = {
+  private def linearSearch(query: Query, node: LeafNode): Unit = {
     val bestMatchesCandidates = node.pointIdx.map { idx => BestMatch(idx, (query.point dot points(idx).features).asInstanceOf[Double]) }
     query.bestMatches ++= (bestMatchesCandidates)
+    query.statistics.innerProductEvaluations = query.statistics.innerProductEvaluations + node.pointIdx.length
   }
-  
+
   private def makeBallSplit(pointIdx: Seq[Int]): (Int, Int) = {
     //finding two points in Set that have largest distance
     val randPoint = points(pointIdx(randomIntGenerator.nextInt(pointIdx.length))).features
@@ -81,7 +114,7 @@ case class BallTree(points: IndexedSeq[IdWithFeatures]) extends Serializable {
   private def makeBallTree(pointIdx: Seq[Int]): Node = {
     val mu = mean(pointIdx)
     val ball = Ball(mu, radius(pointIdx, mu))
-    if (pointIdx.length <= leafThreshold) {
+    if (pointIdx.length <= leafSize) {
       //Leaf Node
       LeafNode(pointIdx, ball)
     } else {
@@ -90,7 +123,7 @@ case class BallTree(points: IndexedSeq[IdWithFeatures]) extends Serializable {
       val (leftSubSet, rightSubSet) = divideSet(pointIdx, pivot1, pivot2)
       val leftChild = makeBallTree(leftSubSet)
       val rightChild = makeBallTree(rightSubSet)
-      InnerNode(pointIdx, ball, leftChild, rightChild)
+      InnerNode(ball, leftChild, rightChild)
     }
   }
 
@@ -98,8 +131,8 @@ case class BallTree(points: IndexedSeq[IdWithFeatures]) extends Serializable {
     if (query.bestMatches.head.value <= upperBoundMaximumInnerProduct(query, node)) {
       //This node has potential
       node match {
-        case LeafNode(_, _) => linearSearch(query, node)
-        case InnerNode(_, _, leftChild, rightChild) => {
+        case LeafNode(_, _) => linearSearch(query, node.asInstanceOf[LeafNode])
+        case InnerNode(ball, leftChild, rightChild) => {
           val boundLeft = upperBoundMaximumInnerProduct(query, leftChild)
           val boundRight = upperBoundMaximumInnerProduct(query, rightChild)
           if (boundLeft <= boundRight) {
@@ -110,9 +143,13 @@ case class BallTree(points: IndexedSeq[IdWithFeatures]) extends Serializable {
             traverseTree(query, rightChild)
           }
         }
+        case x => throw new RuntimeException(s"default case in match has been visited for type${x.getClass}: " + x.toString)
       }
-    } else
+    } else {
+      //ignoring this subtree
+      query.statistics.subTreeIgnores += 1
       return
+    }
   }
 
   def findMultipleMaximumInnerProducts(queries: IndexedSeq[DenseVector[Double]], k: Int = 1): Seq[Seq[BestMatch]] = {
@@ -123,15 +160,16 @@ case class BallTree(points: IndexedSeq[IdWithFeatures]) extends Serializable {
   }
 
   def findMaximumInnerProducts(queryPoint: DenseVector[Double], k: Int = 1): Seq[BestMatch] = {
-    val bestMatches = new BoundedPriorityQueue[BestMatch](k)(Ordering.by(_.value))
-    bestMatches += (BestMatch(-1, Double.NegativeInfinity))
-    val query = Query(queryPoint, bestMatches)
-    traverseTree(query, root)
-    query.bestMatches.toArray.sorted(Ordering.by((_: BestMatch).value).reverse)
+    val query = new Query(queryPoint, k)
+    query.statistics.pointsInTree = pointIdx.length
+    traverseTree(query)
+    val sortedBestMatches = query.bestMatches.toArray.sorted(Ordering.by((_: BestMatch).value).reverse)
+    println(query.statistics)
+    //replace internal sequence id with the actual external item id
+    sortedBestMatches.transform(bm => BestMatch(points(bm.index).id, bm.value))
   }
-  
+
   override def toString() = {
-    s"Balltree with data size of ${points.length} (${points.take(1)}})"
+    s"Balltree with data size of ${points.length} (${points.take(1)})"
   }
 }
-
