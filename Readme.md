@@ -34,7 +34,7 @@ val userFeatures : (Int,DenseVector[Double]) = model.userFeatures.map{case(userI
 val ballTreeBC = sc.broadcast(ballTree)
 val recommendationsForUser = userFeatures.map{case(userId: Int,features: DenseVector[Double]) => (userId,ballTree.findMaximumInnerProducts(features,5))}
 ```
-to let the spark executors predict the 5 best matches for each user.
+to let the spark executors predict the 5 best matches for each user (parallelized over all users).
 
 ## License
 
