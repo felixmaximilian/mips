@@ -24,7 +24,7 @@ ballTree.findMaximumInnerProducts(features,5)
 
 You can optionally pass the size of the leaf nodes (number of elements contained). The default is set to 50 elements per leaf node. Once the tree is constructed its not meant to be changed (immutable).
 
-Hints:
+## Hints:
 This implementation works nice together the latent vectors obtained by spark's mllib matrix factorization algorithm.
 Build the tree like above on your spark master, then
 ```
