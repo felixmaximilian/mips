@@ -12,27 +12,27 @@ The implemented algorithm is taken from "Maximum Inner-Product Search using Tree
 # Using this Implementation
 
 The balltree is constucted by passing the vectors with their external ids:
-´´´code
+```
 val pointsWithExternalId: Array(Int,DenseVector[Double]) = ... // data given by you
 val points: VectorWithExternalId = pointsWithExternalId.map{case(externalId,featureVector) => VectorWithExternalId(externalId,featureVector)}
 val ballTree = BallTree(points)
-´´´´
+```
 Search for the 5 best matches is triggered by:
-´´´code
+```
 ballTree.findMaximumInnerProducts(features,5)
-´´´´
+```
 
 You can optionally pass the size of the leaf nodes (number of elements contained). The default is set to 50 elements per leaf node. Once the tree is constructed its not meant to be changed (immutable).
 
 Hints:
 This implementation works nice together the latent vectors obtained by spark's mllib matrix factorization algorithm.
 Build the tree like above on your spark master, then
-´´´code
+```
 val model: MatrixFactorizationModel = ...
 val userFeatures : (Int,DenseVector[Double]) = model.userFeatures.map{case(userId: Int,features: Array[Double]) => (userId,DenseVector(features)}
 val ballTreeBC = sc.broadcast(ballTree)
 val recommendationsForUser = userFeatures.map{case(userId: Int,features: DenseVector[Double]) => (userId,ballTree.findMaximumInnerProducts(features,5))}
-´´´´
+```
 to let the spark executors predict the 5 best matches for each user.
 
 # License
