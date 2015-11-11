@@ -10,6 +10,10 @@ This algorithm reduces the complexity of the naive approach (linear search) from
 
 The implemented algorithm is taken from "Maximum Inner-Product Search using Tree Data-structures" (Parikshit Ram, Alexander G. Gray, 2012).
 
+## Dependencies & Requirements
+- Breeze (https://github.com/scalanlp/breeze)
+- Scala Version >= 2.10
+
 ## Using this Implementation
 
 The balltree is constucted by passing the vectors with their external ids:
@@ -39,4 +43,3 @@ to let the spark executors predict the 5 best matches for each user (parallelize
 ## License
 
 This Software is licensed under Apache License Version 2.0. It uses the Breeze library for numerical processing and includes a copy of a file from the Apache Spark project (BoundedPriorityQueue).
-
