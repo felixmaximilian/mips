@@ -12,7 +12,7 @@ The implemented algorithm is taken from "Maximum Inner-Product Search using Tree
 
 ## Dependencies & Requirements
 - Breeze (https://github.com/scalanlp/breeze)
-- Scala Version >= 2.10
+- Scala Version >= 2.11
 
 ## Using this Implementation
 
