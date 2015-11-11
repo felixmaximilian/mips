@@ -9,6 +9,8 @@ import de.mips.data.{BestMatch, VectorWithExternalId}
 import de.mips.geometric.Ball
 
 final case class BallTree(points: IndexedSeq[VectorWithExternalId],leafSize:Int = 50) extends Serializable {
+  
+  val epsilon = 0.000001
 
   //using java version of Random() cause the scala version is only serializable since scala version 2.11
   val randomIntGenerator = new java.util.Random()
@@ -63,8 +65,9 @@ final case class BallTree(points: IndexedSeq[VectorWithExternalId],leafSize:Int 
 
   private def makeBallTree(pointIdx: Seq[Int]): Node = {
     val mu = mean(pointIdx)
-    val ball = Ball(mu, radius(pointIdx, mu))
-    if (pointIdx.length <= leafSize) {
+    val r = radius(pointIdx, mu)
+    val ball = Ball(mu, r)
+    if (pointIdx.length <= leafSize || r < epsilon) {
       //Leaf Node
       LeafNode(pointIdx, ball)
     } else {
